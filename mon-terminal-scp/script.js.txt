@@ -1,0 +1,324 @@
+// --- SCENE 3D (Terre filaire) ---
+// Ces lignes préparent les variables pour la scène 3D (la vue, la caméra, ce qui rend l'image)
+let scene, camera, renderer, earth;
+const earthRotationSpeed = 0.005; // Vitesse à laquelle la terre tourne (petit chiffre = lent)
+let rotationsCompleted = 0; // Compteur de rotations
+const targetRotations = 3; // On veut 3 rotations avant de passer à la suite
+
+// Fonction qui va créer la Terre 3D et la préparer
+const init3D = () => {
+    // 1. La Scène : C'est l'univers où tout se passe
+    scene = new THREE.Scene();
+
+    // 2. La Caméra : C'est comme vos yeux, elle regarde la scène
+    // (75: angle de vue, window.innerWidth / window.innerHeight: ratio de l'écran, 0.1, 1000: distances de vue)
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5; // On recule la caméra pour bien voir la terre
+
+    // 3. Le Rendu (Renderer) : C'est ce qui dessine la scène sur votre écran
+    renderer = new THREE.WebGLRenderer({ antialias: true }); // antialias rend les bords plus doux
+    renderer.setSize(window.innerWidth, window.innerHeight); // Le rendu prend toute la taille de la fenêtre
+    // On ajoute cette "zone de dessin" (le canvas) à notre page HTML
+    document.getElementById('webgl-container').appendChild(renderer.domElement);
+
+    // 4. Les Lumières : Sans lumière, on ne voit rien !
+    const ambientLight = new THREE.AmbientLight(0x404040); // Lumière douce, éclaire tout un peu
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5); // Lumière venant d'une direction
+    directionalLight.position.set(1, 1, 1).normalize(); // La direction de la lumière
+    scene.add(directionalLight);
+
+    // 5. Création de la Terre filaire :
+    const geometry = new THREE.SphereGeometry(2, 32, 32); // On crée une sphère (rayon 2, détails 32x32)
+    // Le "matériau" qui donne l'apparence de la sphère
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00, // Couleur verte
+        wireframe: true, // IMPORTANT : c'est ça qui fait l'effet "filaire"
+        transparent: true, // Rendre transparent
+        opacity: 0.7 // Un peu transparent
+    });
+    earth = new THREE.Mesh(geometry, material); // On combine la forme et l'apparence
+    scene.add(earth); // On ajoute la terre à notre scène
+
+    // Quand la fenêtre change de taille, on ajuste la caméra et le rendu
+    window.addEventListener('resize', onWindowResize, false);
+};
+
+// Fonction pour ajuster quand la fenêtre est redimensionnée
+const onWindowResize = () => {
+    camera.aspect = window.innerWidth / window.innerHeight; // Adapte le ratio de la caméra
+    camera.updateProjectionMatrix(); // Met à jour la caméra
+    renderer.setSize(window.innerWidth, window.innerHeight); // Adapte la taille du rendu
+};
+
+// Fonction d'animation : c'est la boucle qui fait tourner la terre
+const animateEarth = () => {
+    requestAnimationFrame(animateEarth); // Demande au navigateur d'appeler cette fonction encore et encore
+
+    if (earth) { // S'assurer que la terre existe
+        const prevRotationY = earth.rotation.y; // Sauve la rotation actuelle
+        earth.rotation.y += earthRotationSpeed; // Fait tourner la terre sur elle-même
+
+        // Vérifie si la terre a fait un tour complet (360 degrés = Math.PI * 2)
+        if (earth.rotation.y >= prevRotationY + Math.PI * 2) {
+            rotationsCompleted++; // On compte un tour de plus
+        }
+
+        // Si on a atteint le nombre de tours désiré
+        if (rotationsCompleted >= targetRotations) {
+            startEarthTransition(); // On lance l'animation de transition
+        }
+    }
+
+    renderer.render(scene, camera); // On dessine la scène avec la caméra
+};
+
+// --- SÉQUENCE DE CHARGEMENT ET TRANSITION ---
+const loadingScreen = document.getElementById('loading'); // On récupère l'écran de chargement
+const loadingProgress = document.getElementById('loading-progress'); // La barre de progression
+const scpLogoTopLeft = document.getElementById('scp-logo-top-left'); // Le logo SCP
+const hudContainer = document.getElementById('hud-container'); // Le conteneur de l'HUD
+
+let loadProgress = 0; // Pour la barre de chargement
+
+// Fonction qui fait avancer la barre de chargement
+const updateLoadingProgress = () => {
+    loadProgress += Math.random() * 10; // On ajoute un peu de progrès au hasard
+    if (loadProgress > 100) loadProgress = 100; // Ne pas dépasser 100%
+    loadingProgress.style.width = loadProgress + '%'; // Met à jour la largeur de la barre
+
+    if (loadProgress < 100) {
+        // Si pas encore à 100%, on rappelle cette fonction après un petit délai
+        setTimeout(updateLoadingProgress, 100 + Math.random() * 200);
+    } else {
+        // Chargement terminé, on fait disparaître l'écran de chargement
+        setTimeout(() => {
+            loadingScreen.classList.add('fade-out'); // Ajoute la classe CSS pour le fondu
+            // Quand le fondu est fini, on supprime l'écran de chargement
+            loadingScreen.addEventListener('transitionend', () => {
+                loadingScreen.remove();
+                init3D(); // On initialise la scène 3D de la terre
+                animateEarth(); // Et on la fait tourner
+            }, { once: true }); // Le { once: true } assure que l'événement ne se déclenche qu'une fois
+        }, 1000); // Attend 1 seconde après 100% avant de disparaître
+    }
+};
+
+// Fonction pour faire la transition de la Terre (se réduire et aller en haut à gauche)
+const startEarthTransition = () => {
+    // On arrête la rotation de la terre normale pour faire la transition
+    cancelAnimationFrame(animateEarth);
+    rotationsCompleted = 0; // On remet le compteur à zéro
+
+    const duration = 2000; // Durée de la transition (2 secondes)
+    const startTime = Date.now(); // Moment où la transition commence
+    const initialPosition = earth.position.clone(); // Position de départ de la terre
+    const initialScale = earth.scale.clone(); // Taille de départ de la terre
+    // Les positions cibles (haut-gauche) sont complexes en 3D, on va simplifier pour l'instant
+    // et vous expliquer après comment faire ça de façon plus visuelle.
+    // Pour l'instant, c'est une estimation pour la 3D.
+    const targetPosition = new THREE.Vector3(-1.5, 1.5, 0); // Positionner la terre en haut à gauche de la vue 3D
+    const targetScale = new THREE.Vector3(0.3, 0.3, 0.3); // Réduire la taille de la terre
+
+    // Fonction qui anime la transition image par image
+    const animateTransition = () => {
+        const elapsed = Date.now() - startTime; // Temps écoulé
+        const progress = Math.min(elapsed / duration, 1); // Progression de 0 à 1
+
+        // La terre se déplace progressivement de la position initiale à la cible
+        earth.position.lerpVectors(initialPosition, targetPosition, progress);
+        // La terre change de taille progressivement
+        earth.scale.lerpVectors(initialScale, targetScale, progress);
+
+        earth.rotation.y += 0.01; // Continue de tourner un peu pendant le déplacement
+        earth.rotation.x += 0.005;
+
+        renderer.render(scene, camera); // Redessine la scène
+
+        if (progress < 1) { // Si la transition n'est pas finie
+            requestAnimationFrame(animateTransition); // On continue l'animation
+        } else {
+            // Une fois la transition finie :
+            scpLogoTopLeft.classList.add('visible'); // On rend le logo SCP visible
+            displayMainHUD(); // On affiche le contenu principal de l'HUD
+        }
+    };
+    animateTransition(); // On lance la transition
+};
+
+
+// Fonction qui affiche le contenu principal de l'HUD
+const displayMainHUD = () => {
+    hudContainer.innerHTML = `
+        <div class="hud-main-content">
+            <div class="hud-header">
+                <span style="color:#00ff00;">SCPINET :</span> Secure - Contain - Protect
+            </div>
+            <div class="hud-loading-bar-division2">
+                <div class="hud-loading-progress" id="hud-main-loading-progress"></div>
+            </div>
+            <div class="hud-message">
+                Chargement des protocoles de sécurité...
+            </div>
+        </div>
+    `;
+    // Styles pour l'HUD principal (ajoutés directement ici pour la simplicité)
+    hudContainer.querySelector('.hud-main-content').style.cssText = `
+        background: rgba(0, 255, 0, 0.05);
+        border: 1px solid #00ff00;
+        padding: 20px;
+        box-shadow: 0 0 10px #00ff00;
+        text-align: center;
+        width: 60%;
+        max-width: 800px;
+    `;
+    hudContainer.querySelector('.hud-header').style.cssText = `
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    `;
+    hudContainer.querySelector('.hud-loading-bar-division2').style.cssText = `
+        width: 80%;
+        height: 15px;
+        background-color: #001a00;
+        border: 1px solid #00ff00;
+        margin: 0 auto 15px auto;
+        overflow: hidden;
+    `;
+    hudContainer.querySelector('#hud-main-loading-progress').style.cssText = `
+        width: 0%;
+        height: 100%;
+        background-color: #00ff00;
+        transition: width 2s ease-out; /* Animation de la barre */
+    `;
+    hudContainer.querySelector('.hud-message').style.cssText = `
+        font-size: 1em;
+    `;
+
+
+    // Animer la barre de chargement de l'HUD
+    setTimeout(() => {
+        const hudLoadingProgress = document.getElementById('hud-main-loading-progress');
+        if (hudLoadingProgress) {
+            hudLoadingProgress.style.width = '100%'; // La barre se remplit
+            hudLoadingProgress.addEventListener('transitionend', () => {
+                // Quand la barre est pleine, on passe à l'étape suivante (petits terminaux)
+                setTimeout(showSmallTerminals, 1000); // Attend 1 seconde
+            }, { once: true });
+        }
+    }, 500); // Attend 0.5 seconde avant de lancer la barre de l'HUD
+};
+
+// Fonction pour afficher les "petits terminaux" (cette partie est à développer)
+const showSmallTerminals = () => {
+    // Pour l'instant, on va juste vider l'HUD et afficher un message
+    hudContainer.innerHTML = `<p>Préparation des systèmes secondaires...</p>`;
+    // Ici, vous devrez créer la logique pour faire apparaître plusieurs petits terminaux
+    // avec des textes différents et des animations "fixes cool sympas".
+    // Ce serait beaucoup de création de divs avec du CSS et des animations.
+
+    // Après un certain temps, on passe au grand terminal
+    setTimeout(showLargeTerminal, 5000); // Attendre 5 secondes
+};
+
+// Fonction pour afficher le grand terminal interactif (cette partie est à développer)
+const showLargeTerminal = () => {
+    // Pour l'instant, on va afficher un message et un champ de texte simple
+    hudContainer.innerHTML = `
+        <div class="main-terminal-content">
+            <p>Accès au répertoire SCPINET.</p>
+            <p>Entrez une commande (par exemple: LIST FILES, ACCESS LOGS, EXIT):</p>
+            <input type="text" id="command-input" placeholder="> ">
+            <div id="terminal-output" style="margin-top: 10px; color: #00ff00; text-align: left;"></div>
+        </div>
+    `;
+    hudContainer.querySelector('.main-terminal-content').style.cssText = `
+        background: rgba(0, 255, 0, 0.08);
+        border: 1px solid #00ff00;
+        padding: 30px;
+        box-shadow: 0 0 20px #00ff00;
+        text-align: center;
+        width: 70%;
+        max-width: 900px;
+    `;
+    const commandInput = document.getElementById('command-input');
+    commandInput.style.cssText = `
+        background: black;
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        width: calc(100% - 20px);
+        padding: 10px;
+        margin-top: 20px;
+        font-family: 'Share Tech Mono', monospace;
+        font-size: 1.1em;
+        outline: none; /* Enlève la bordure au focus */
+    `;
+
+    // Petite logique très simple pour l'invite de commande
+    commandInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            const command = commandInput.value.trim().toUpperCase();
+            const output = document.getElementById('terminal-output');
+            output.innerHTML += `> ${command}<br>`;
+            commandInput.value = ''; // Efface l'entrée
+
+            if (command === "LIST FILES") {
+                output.innerHTML += `
+                    - dossier_alpha<br>
+                    - dossier_beta<br>
+                    - dossier_gamma<br>
+                    - rapport_O5.txt<br>
+                `;
+            } else if (command === "ACCESS LOGS") {
+                output.innerHTML += `
+                    Accès aux logs restreint.<br>
+                    Autorisation niveau 4 requise.<br>
+                `;
+            } else if (command === "EXIT") {
+                output.innerHTML += `Déconnexion...<br>`;
+                setTimeout(startAlertSequence, 1500); // Lance l'alerte après EXIT
+            } else {
+                output.innerHTML += `Commande inconnue: "${command}". Tapez 'LIST FILES' ou 'EXIT'.<br>`;
+            }
+            output.scrollTop = output.scrollHeight; // Fait défiler vers le bas
+        }
+    });
+};
+
+// Fonction pour démarrer la séquence d'alerte (à développer)
+const startAlertSequence = () => {
+    console.log("Séquence d'alerte lancée !");
+    hudContainer.innerHTML = `
+        <div class="alert-message" style="color: red; font-size: 3em; text-align: center; text-shadow: 0 0 15px red; animation: pulseRed 0.5s infinite alternate;">
+            !!! ALERTE INTRUSION !!!
+        </div>
+        <div class="alert-sub-message" style="color: yellow; font-size: 1.5em; text-align: center; margin-top: 20px;">
+            Envoi d'une FIM spécialisée...
+        </div>
+    `;
+    // Animation CSS pour le texte d'alerte
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = `
+        @keyframes pulseRed {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+    `;
+    document.head.appendChild(styleElement);
+
+
+    // Ici, vous devrez créer les nombreux terminaux d'alerte qui apparaissent.
+    // Puis, faire disparaître le tout.
+    setTimeout(() => {
+        // Faire disparaître tout l'écran après un délai
+        document.body.innerHTML = `
+            <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: black; display: flex; justify-content: center; align-items: center; color: red; font-size: 4em; text-align: center; text-shadow: 0 0 20px red;">
+                ACCÈS INTERDIT - PROCÉDURE D'URGENCE ACTIVÉE
+            </div>
+        `;
+    }, 8000); // Disparaît après 8 secondes d'alerte
+};
+
+
+// Démarrer la séquence de chargement quand la page est prête
+document.addEventListener('DOMContentLoaded', updateLoadingProgress);

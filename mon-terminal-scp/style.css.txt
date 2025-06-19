@@ -1,0 +1,11 @@
+/* Importation d'une police "terminal" */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: black;
+    font-family: 'Share Tech Mono', monospace; /* Applique la police */
+    color: #00ff00; /* Texte vert */
+    text-shadow: 0 0 5px #00ff00; /* Effet lumineux autour du texte */
+}

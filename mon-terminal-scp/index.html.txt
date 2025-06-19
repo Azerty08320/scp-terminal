@@ -1,0 +1,129 @@
+Génial ! Si vous voyez index.html et pas index.html.txt, c'est parfait, ça veut dire que votre ordinateur affiche les extensions de fichier correctement. C'est exactement ce qu'on veut.
+
+Donc, pour résumer, dans votre dossier mon-terminal-scp, vous avez bien :
+
+Un fichier nommé index.html
+Votre image de logo nommée scp_logo.png
+Étape 4 : Ouvrir et modifier index.html
+Maintenant que vous avez les fichiers, nous allons mettre le "squelette" (le code HTML) dedans. Pour ça, vous avez besoin d'un programme pour modifier le texte. Le "Bloc-notes" de Windows est suffisant pour débuter.
+
+Faites un clic droit sur le fichier index.html.
+Dans le menu qui apparaît, choisissez "Ouvrir avec".
+Puis, sélectionnez "Bloc-notes" (ou "Notepad" en anglais).
+Le fichier va s'ouvrir et sera vide pour l'instant.
+
+Étape 5 : Coller le code HTML de base
+Copiez tout le code qui se trouve ci-dessous (commencez par <!DOCTYPE html> et allez jusqu'à </html>).
+
+HTML
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCPINET Access Terminal</title>
+    <link rel="stylesheet" href="style.css">
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.165.0/three.min.js"></script>
+    <style>
+        /* Styles de base pour le corps de la page */
+        body {
+            margin: 0;
+            overflow: hidden; /* Empêche les barres de défilement */
+            background-color: black; /* Fond noir */
+        }
+        /* Conteneur pour la Terre 3D */
+        #webgl-container {
+            position: fixed; /* Reste en arrière-plan */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1; /* Derrière les autres éléments */
+        }
+        /* Conteneur pour l'HUD (informations et texte) */
+        #hud-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10; /* Au-dessus de la Terre */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #00ff00; /* Vert terminal */
+            font-family: 'Share Tech Mono', monospace; /* Police */
+            font-size: 1.2em;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        /* Écran de chargement initial */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ff0000; /* Rouge */
+            font-size: 2.5em;
+            font-family: 'Share Tech Mono', monospace;
+            z-index: 100;
+            transition: opacity 1s ease-out; /* Animation de fondu */
+        }
+        #loading.fade-out {
+            opacity: 0; /* Devient transparent */
+            pointer-events: none; /* Ne peut plus être cliqué */
+        }
+        .loading-bar {
+            width: 300px;
+            height: 10px;
+            background-color: #330000;
+            border: 1px solid #ff0000;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .loading-progress {
+            width: 0%;
+            height: 100%;
+            background-color: #ff0000;
+            transition: width 0.5s ease-out; /* Animation de la barre */
+        }
+        /* Logo SCP en haut à gauche */
+        .scp-logo-small {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 80px; /* Taille du logo */
+            height: auto;
+            opacity: 0; /* Caché au début */
+            transition: opacity 1s ease-in-out; /* Animation de fondu */
+            z-index: 11;
+        }
+        .scp-logo-small.visible {
+            opacity: 1; /* Apparaît */
+        }
+    </style>
+</head>
+<body>
+    <div id="webgl-container"></div>
+
+    <div id="loading">
+        <p>SCPINET :: INITIALISATION DU SYSTÈME</p>
+        <div class="loading-bar">
+            <div class="loading-progress" id="loading-progress"></div>
+        </div>
+    </div>
+
+    <div id="hud-container">
+        </div>
+
+    <img src="scp_logo.png" alt="SCP Foundation Logo" class="scp-logo-small" id="scp-logo-top-left">
+
+    <script src="script.js"></script>
+</body>
+</html>
